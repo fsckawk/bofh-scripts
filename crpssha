@@ -1,1 +1,63 @@
-../../security/crpssha
+#!/usr/bin/perl
+#
+# This small script generates an Seeded SHA1 hash of the given password
+# or compares it against a given password hash
+#
+# 'salt' = four random bytes
+#
+# Usage: crpssha [-s salt | -c cpass] [-q] pass
+# Version 0.0; Wed Jan 21 15:19:24 CET 2026
+#
+use Digest::SHA1;
+use MIME::Base64;
+use Getopt::Std;
+
+
+my $DEF_SALT="";
+
+our $opt_s="";
+our $opt_c="";
+our $opt_q="";
+our $opt_x="";
+
+our $crypt;
+our $bincrypt;
+
+getopts('c:s:qx');
+	
+my $salt = $opt_s || $DEF_SALT;
+
+if ( $salt eq "" )
+{
+	my @set = ('0' ..'9', 'A' .. 'F');
+	$salt = join '' => map $set[rand @set], 1 .. 4;
+}
+
+if ( $opt_c ne "" )
+{
+	$crypt=$opt_c;
+	$bincrypt=decode_base64($crypt);
+	$salt=substr($bincrypt, -4);
+}
+
+our $pw = $ARGV[0];
+
+if ( $pw ne "" )
+{
+	# Compare against $opt_c ?
+	$ctx = Digest::SHA1->new;
+	$ctx->add($pw);
+	$ctx->add($salt);
+	$hash = encode_base64($ctx->digest . $salt ,'');
+	if ( ! $opt_q ) {
+		print '{SSHA}' . $hash . "\n";
+	}
+	if ( $opt_c ne "" ) {
+		exit ( $opt_c ne $hash );
+	}
+	exit (0);
+} else {
+	exit (1);
+}
+
+
